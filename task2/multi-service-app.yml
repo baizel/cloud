@@ -5,16 +5,11 @@ services:
     image: nclcloudcomputing/javabenchmarkapp
     ports:
       - "80:8080"
-#    ports:
-#      - target: 8080 # port inside container
-#        published: 80 # Exposed port
-#        protocol: tcp
-#        mode: ingress # for swarm mode
     deploy:
       mode: replicated
       replicas: 2
 
-  swarm-viz:
+  swarm-visualizer:
     image: dockersamples/visualizer
     deploy:
       placement:
@@ -28,8 +23,10 @@ services:
         protocol: tcp
         mode: host
 
-  db:
+  mongo-db:
     image: mongo:latest
+    ports:
+      - "3306:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: toor
