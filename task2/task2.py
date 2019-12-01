@@ -34,7 +34,7 @@ def createSwarmVisualizerService(client: DockerClient) -> ServiceCollection:
 def createMongoService(client: DockerClient) -> ServiceCollection:
     image = "mongo"
     kwargs = {
-        "name": "monog-db",
+        "name": "mongo-db",
         "endpoint_spec": EndpointSpec(ports={3306: 27017}),
     }
     service = client.services.create(image, **kwargs)
