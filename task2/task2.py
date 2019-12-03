@@ -35,7 +35,7 @@ def createMongoService(client: DockerClient) -> ServiceCollection:
     image = "mongo"
     kwargs = {
         "name": "mongo-db",
-        "endpoint_spec": EndpointSpec(ports={3306: 27017}),
+        "endpoint_spec": EndpointSpec(ports={3306: (27017, "tcp")}),
     }
     service = client.services.create(image, **kwargs)
     print("created Mongo service")

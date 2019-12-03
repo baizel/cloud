@@ -2,6 +2,13 @@ import json
 import time
 import requests
 import docker
+import sys
+import pymongo
+from pymongo import MongoClient
+
+
+def stripTime(tme):
+    return tme.split("T")[1].split(".")[0]
 
 
 def getCpuData(data):
@@ -10,7 +17,7 @@ def getCpuData(data):
 
     totalCpuUsage = data[dataIndex]['stats'][statsIndex]['cpu']['usage']['total']
     totalCpuUsagePrevious = data[dataIndex]['stats'][statsIndex - 1]['cpu']['usage']['total']
-    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp'].split("T")[1].split(".")[0]
+    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp']
     diffInTime = (totalCpuUsage - totalCpuUsagePrevious) * 1e-9  # Nano seconds to seconds
     return timeStamp, diffInTime
 
@@ -18,7 +25,7 @@ def getCpuData(data):
 def getMemoryData(data):
     dataIndex = 0
     statsIndex = len(data[dataIndex]['stats']) - 1
-    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp'].split("T")[1].split(".")[0]
+    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp']
     memoryUsage = data[dataIndex]["stats"][statsIndex]["memory"]['usage'] * 1e-6  # bytes to MB
     return timeStamp, memoryUsage
 
@@ -28,11 +35,16 @@ def getIOTime(data):
     statsIndex = len(data[dataIndex]['stats']) - 1
     fileSystemIndex = len(data[dataIndex]['stats'][dataIndex]['filesystem']) - 1
     totalIOTime = data[dataIndex]['stats'][dataIndex]['filesystem'][fileSystemIndex]['io_time']
-    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp'].split("T")[1].split(".")[0]
+    timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp']
     return timeStamp, totalIOTime
 
 
 if __name__ == "__main__":
+    writeToDb = False
+    if len(sys.argv) > 1 and sys.argv[1] == "-r":
+        print("Data will be recorded to database")
+        writeToDb = True
+
     docker = docker.from_env()
     ids = []
     for i in docker.containers.list():
@@ -46,10 +58,17 @@ if __name__ == "__main__":
     urls = [url, url2]
     while True:
         for i in urls:
+            id = i.split("docker/")[1]
             data = json.loads(requests.get(url).content)
             timeStamp, cpuUsage = getCpuData(data)
             _, memoryUsage = getMemoryData(data)
             _, ioTime = getIOTime(data)
-            print("Container id {:5s} Cpu usage: Time {}, Usage: {:.2f}s, Memory usage {} MB, I/O Time: {} ".format(i.split("docker/")[1][:5], timeStamp, cpuUsage, memoryUsage,ioTime))
+            print("Container id {:5s} Cpu usage: Time {}, Usage: {:.2f}s, Memory usage {} MB, I/O Time: {} ".format(id[:5], stripTime(timeStamp), cpuUsage, memoryUsage, ioTime))
+            if writeToDb:
+                client = MongoClient('10.58.220.242', 3306)
+                database = client["recorded_stats"]
+                collection = database["data"]
+                dataForDb = {"containerId": id, "timestamp": timeStamp, "cpu_usage": cpuUsage, "memory_usage": memoryUsage, "io_time": ioTime}
+                collection.insert_one(dataForDb)
         print("")
         time.sleep(1)
