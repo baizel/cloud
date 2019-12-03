@@ -14,8 +14,8 @@ poissonDistributionData = {}
 
 
 class Distribution(Enum):
-    Poisson = "Poisson"
-    Normal = "Normal"
+    Poisson = "poisson"
+    Normal = "normal"
 
     def __str__(self):
         return self.value
@@ -70,38 +70,43 @@ def getRandomNormal(mean: float, stdev: float) -> float:
     return random.choices(population, weights)[0]
 
 
-def addLoad(url: str, randomGenerator: FunctionType, genArgs: tuple, numberOfIterations) -> None:
+def createLoad(url: str, randomGenerator: FunctionType, genArgs: tuple, numberOfIterations) -> None:
     for i in range(0, numberOfIterations):
-        print("Calling To Url" + url)
+        print("Executing HTTP GET to URL " + url)
         threading.Thread(target=callToUrl(url)).start()
         interval = randomGenerator(*genArgs) / 10
-        print("sleeping for " + str(interval) + "s")
+        print("Sleeping for " + str(interval) + "s")
         time.sleep(interval)
 
 
-choicesOfDistribution = [i.value for i in Distribution]
+if __name__ == "__main__":
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--url", type=str, help="Url of the target to load test on", required=True)
-parser.add_argument("--dist", type=Distribution, help="Distribution, choose one of {}".format(choicesOfDistribution), choices=list(Distribution), required=True)
-parser.add_argument("--iter", type=int, help="Number of iteration to call the url before the program terminates}", required=True)
+    choicesOfDistribution = [i.value for i in Distribution]
 
-parser.add_argument("--mean", type=float, help="Mean for the normal distribution")
-parser.add_argument("--stdev", type=float, help="Standard deviation for the normal distribution")
-parser.add_argument("--lamb", type=float, help="Lambda for Poisson distribution")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", type=str, help="Url of the target to load test on", required=True)
+    parser.add_argument("--dist", type=Distribution, help="Distribution, choose one of {}".format(choicesOfDistribution), choices=list(Distribution), required=True)
+    parser.add_argument("--iter", type=int, help="Number of iteration to call the url before the program terminates}", required=True)
 
-args = parser.parse_args()
-generator = None
-generatorArgs = ()
-if Distribution(args.dist) == Distribution.Normal:
-    if args.stdev is None or args.mean is None:
-        raise ValueError("Mean or Standard deviation value missing")
-    generator = getRandomNormal
-    generatorArgs = (args.mean, args.stdev)
-elif Distribution(args.dist) == Distribution.Poisson:
-    if args.lamb is None:
-        raise ValueError("Lambda value missing")
-    generator = getRandomPoisson
-    generatorArgs = (args.lamb, args.iter)
+    parser.add_argument("--mean", type=float, help="Mean for the normal distribution")
+    parser.add_argument("--stdev", type=float, help="Standard deviation for the normal distribution")
+    parser.add_argument("--lamb", type=float, help="Lambda for Poisson distribution")
 
-addLoad(args.url, generator, generatorArgs, args.iter)
+    args = parser.parse_args()
+
+    generator = None
+    generatorArgs = ()
+
+    if Distribution(args.dist) == Distribution.Normal:
+        if args.stdev is None or args.mean is None:
+            raise ValueError("Mean or Standard deviation value missing")
+        generator = getRandomNormal
+        generatorArgs = (args.mean, args.stdev)
+
+    elif Distribution(args.dist) == Distribution.Poisson:
+        if args.lamb is None:
+            raise ValueError("Lambda value missing")
+        generator = getRandomPoisson
+        generatorArgs = (args.lamb, args.iter)
+
+    createLoad(args.url, generator, generatorArgs, args.iter)
