@@ -3,7 +3,6 @@ import time
 import requests
 import docker
 import sys
-import pymongo
 from pymongo import MongoClient
 
 
@@ -33,8 +32,7 @@ def getMemoryData(data):
 def getIOTime(data):
     dataIndex = 0
     statsIndex = len(data[dataIndex]['stats']) - 1
-    fileSystemIndex = len(data[dataIndex]['stats'][dataIndex]['filesystem']) - 1
-    totalIOTime = data[dataIndex]['stats'][dataIndex]['filesystem'][fileSystemIndex]['io_time']
+    totalIOTime = data[dataIndex]['stats'][statsIndex]['diskio']["io_time"][-1]["stats"]["Count"]  # -1 for the last one in list
     timeStamp = data[dataIndex]['stats'][statsIndex]['timestamp']
     return timeStamp, totalIOTime
 
@@ -43,7 +41,7 @@ if __name__ == "__main__":
     writeToDb = False
     host = None
     if len(sys.argv) > 1 and sys.argv[1] == "-r":
-        if sys.argv[2] is not None:
+        if len(sys.argv) > 2 and sys.argv[2] is not None:
             print("Data will be recorded to database")
             host = sys.argv[2]
             writeToDb = True
@@ -69,7 +67,7 @@ if __name__ == "__main__":
             timeStamp, cpuUsage = getCpuData(data)
             _, memoryUsage = getMemoryData(data)
             _, ioTime = getIOTime(data)
-            print("Container id {:5s} Cpu usage: Time {}, Usage: {:.2f}s, Memory usage {} MB, I/O Time: {} ".format(id[:5], stripTime(timeStamp), cpuUsage, memoryUsage, ioTime))
+            print("Container id {} Cpu usage: Time {}, Usage: {:.4f}s, Memory usage {} MB, I/O Time: {} ".format(id[:5], stripTime(timeStamp), cpuUsage, memoryUsage, ioTime))
             if writeToDb:
                 client = MongoClient(host,
                                      port=3306,
@@ -82,4 +80,4 @@ if __name__ == "__main__":
                 dataForDb = {"containerId": id, "timestamp": timeStamp, "cpu_usage": cpuUsage, "memory_usage": memoryUsage, "io_time": ioTime}
                 collection.insert_one(dataForDb)
         print("")
-        time.sleep(1)
+        time.sleep(3)
