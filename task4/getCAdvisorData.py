@@ -41,9 +41,15 @@ def getIOTime(data):
 
 if __name__ == "__main__":
     writeToDb = False
+    host = None
     if len(sys.argv) > 1 and sys.argv[1] == "-r":
-        print("Data will be recorded to database")
-        writeToDb = True
+        if sys.argv[2] is not None:
+            print("Data will be recorded to database")
+            host = sys.argv[2]
+            writeToDb = True
+
+        else:
+            raise ValueError("no host provided for database")
 
     docker = docker.from_env()
     ids = []
@@ -65,7 +71,12 @@ if __name__ == "__main__":
             _, ioTime = getIOTime(data)
             print("Container id {:5s} Cpu usage: Time {}, Usage: {:.2f}s, Memory usage {} MB, I/O Time: {} ".format(id[:5], stripTime(timeStamp), cpuUsage, memoryUsage, ioTime))
             if writeToDb:
-                client = MongoClient('10.58.220.242', 3306)
+                client = MongoClient(host,
+                                     port=3306,
+                                     username='root',
+                                     password='toor',
+                                     authSource='admin',
+                                     authMechanism='SCRAM-SHA-256')
                 database = client["recorded_stats"]
                 collection = database["data"]
                 dataForDb = {"containerId": id, "timestamp": timeStamp, "cpu_usage": cpuUsage, "memory_usage": memoryUsage, "io_time": ioTime}
