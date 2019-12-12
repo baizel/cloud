@@ -1,3 +1,5 @@
+#!/usr/bin/env python3.7
+
 import docker
 
 ports = {"8080/tcp": "8080"}
