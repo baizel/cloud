@@ -69,6 +69,7 @@ if __name__ == "__main__":
                 upserts = [UpdateOne({'_id': x['_id']}, {'$setOnInsert': x}, upsert=True) for x in dbData]
                 collection.bulk_write(upserts)
             for i in dbData:
-                print("Container id {} Time {}, Cpus Usage: {:.4f}s, Memory usage {:.2f} MB, I/O Time: {} ".format(containerId[:5], i["_id"], i["cpu_usage"] * 1e-9, i["memory_usage"] * 1e-6, i["io_time"]))
+                print("Container id {} Time {}, Cpus Usage: {:.4f}s, Memory usage {:.2f} MB, I/O Time: {} ".
+                      format(containerId[:5], i["_id"], i["cpu_usage"] * 1e-9, i["memory_usage"] * 1e-6, i["io_time"]))
             print("")
         time.sleep(DELAY_BETWEEN_CALLS)
